@@ -46,20 +46,6 @@ module "blog_sg" {
   egress_cidr_blocks  = ["0.0.0.0/0"]
 }
 
-# Create a Launch Template for Auto Scaling
-resource "aws_launch_template" "blog_lt" {
-  name_prefix   = "blog-asg"
-  description   = "Launch template for Blog ASG"
-  image_id      = data.aws_ami.app_ami.id
-  instance_type = var.instance_type
-
-  vpc_security_group_ids = [module.blog_sg.security_group_id]
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
 # Auto Scaling Group
 module "autoscaling" {
   source  = "terraform-aws-modules/autoscaling/aws"
@@ -70,10 +56,10 @@ module "autoscaling" {
   desired_capacity  = 1
 
   vpc_zone_identifier = module.blog_vpc.public_subnets
+  # target_group_arns   = module.blog_alb.target_group_arns
   security_groups     = [module.blog_sg.security_group_id]
-
-  launch_template_id      = aws_launch_template.blog_lt.id
-  launch_template_version = aws_launch_template.blog_lt.latest_version
+  instance_type       = var.instance_type
+  image_id            = data.aws_ami.app_ami.id
 }
 
 # Application Load Balancer (ALB)
