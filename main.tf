@@ -1,3 +1,4 @@
+# Fetch latest AMI for Bitnami Tomcat
 data "aws_ami" "app_ami" {
   most_recent = true
 
@@ -14,6 +15,7 @@ data "aws_ami" "app_ami" {
   owners = ["979382823631"] # Bitnami
 }
 
+# VPC Module
 module "blog_vpc" {
   source = "terraform-aws-modules/vpc/aws"
 
@@ -29,37 +31,69 @@ module "blog_vpc" {
   }
 }
 
-module "autoscaling" {
+# Security Group
+module "blog_sg" {
+  source  = "terraform-aws-modules/security-group/aws"
+  version = "5.3.0"
+  name    = "blog"
 
+  vpc_id = module.blog_vpc.vpc_id
+
+  ingress_rules       = ["http-80-tcp", "https-443-tcp"]
+  ingress_cidr_blocks = ["0.0.0.0/0"]
+
+  egress_rules        = ["all-all"]
+  egress_cidr_blocks  = ["0.0.0.0/0"]
+}
+
+# Create a Launch Template for Auto Scaling
+resource "aws_launch_template" "blog_lt" {
+  name_prefix   = "blog-asg"
+  description   = "Launch template for Blog ASG"
+  image_id      = data.aws_ami.app_ami.id
+  instance_type = var.instance_type
+
+  vpc_security_group_ids = [module.blog_sg.security_group_id]
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# Auto Scaling Group
+module "autoscaling" {
   source  = "terraform-aws-modules/autoscaling/aws"
-  
-  name = "blog"
-  min_size = 1
-  max_size = 2
+
+  name              = "blog-asg"
+  min_size          = 1
+  max_size          = 2
+  desired_capacity  = 1
 
   vpc_zone_identifier = module.blog_vpc.public_subnets
   security_groups     = [module.blog_sg.security_group_id]
 
-  image_id      = data.aws_ami.app_ami.id
-  instance_type = var.instance_type
+  launch_template = {
+    id      = aws_launch_template.blog_lt.id
+    version = aws_launch_template.blog_lt.latest_version
+  }
 }
 
+# Application Load Balancer (ALB)
 module "blog_alb" {
   source = "terraform-aws-modules/alb/aws"
 
-  name    = "blog-alb"
+  name                = "blog-alb"
+  load_balancer_type  = "application"
 
-  load_balancer_type = "application"
-
-  vpc_id  = module.blog_vpc.vpc_id
-  subnets = module.blog_vpc.public_subnets
-  security_groups = [module.blog_sg.security_group_id]
+  vpc_id              = module.blog_vpc.vpc_id
+  subnets             = module.blog_vpc.public_subnets
+  security_groups     = [module.blog_sg.security_group_id]
 
   listeners = [
     {
-      port            = 80
-      protocol        = "HTTP"
-      forward = {
+      port     = 80
+      protocol = "HTTP"
+      forward  = {
         target_group_key = "ex-instance"
       }
     }
@@ -67,10 +101,10 @@ module "blog_alb" {
 
   target_groups = {
     ex-instance = {
-      name_prefix      = "blog-"
-      protocol         = "HTTP"
-      port             = 80
-      target_type      = "instance"
+      name_prefix = "blog-"
+      protocol    = "HTTP"
+      port        = 80
+      target_type = "instance"
     }
   }
 
@@ -79,29 +113,8 @@ module "blog_alb" {
   }
 }
 
-resource "aws_lb_target_group_attachment" "lb_target_group_attachment" {
-  for_each          = toset(module.autoscaling.autoscaling_group_arn)  # Assuming you're using Auto Scaling instances
-  target_group_arn  = module.blog_alb.target_groups["ex-instance"].arn
-
-  target_id         = each.value.id  # EC2 instance ID or Auto Scaling instance ID
-  port              = 80
-}
-
+# Attach Auto Scaling Group to Target Group
 resource "aws_autoscaling_attachment" "asg_alb_attachment" {
-  autoscaling_group_name = module.autoscaling.autoscaling_group_id
+  autoscaling_group_name = module.autoscaling.autoscaling_group_name
   lb_target_group_arn    = module.blog_alb.target_groups["ex-instance"].arn
-}
-
-module "blog_sg" {
-  source  = "terraform-aws-modules/security-group/aws"
-  version = "5.3.0"
-  name = "blog"
-
-  vpc_id = module.blog_vpc.vpc_id
-
-  ingress_rules       = ["http-80-tcp","https-443-tcp"]
-  ingress_cidr_blocks = ["0.0.0.0/0"]
-
-  egress_rules = ["all-all"]
-  egress_cidr_blocks = ["0.0.0.0/0"]
 }
