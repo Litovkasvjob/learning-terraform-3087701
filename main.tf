@@ -14,10 +14,6 @@ data "aws_ami" "app_ami" {
   owners = ["979382823631"] # Bitnami
 }
 
-data "aws_vpc" "default" {
-  default = true
-}
-
 module "blog_vpc" {
   source = "terraform-aws-modules/vpc/aws"
 
@@ -57,30 +53,31 @@ module "blog_alb" {
   subnets = module.blog_vpc.public_subnets
   security_groups = [module.blog_sg.security_group_id]
 
-  listeners = {
-    ex-http = {
+  listeners = [
+    {
       port            = 80
       protocol        = "HTTP"
-
-      forward = {
-        target_group_key = "ex-instance"
+      default_action = {
+        type = "forward"
+        target_group_arn = module.blog_alb.target_group_arns[0]
       }
     }
-  }
+  ]
 
-  target_groups = {
-    ex-instance = {
-      name_prefix      = "blog-"
-      protocol         = "HTTP"
-      port             = 80
-      target_type      = "instance"
+  target_groups = [
+    {
+      name_prefix = "blog-"
+      protocol    = "HTTP"
+      port        = 80
+      target_type = "instance"
     }
-  }
+  ]
 
   tags = {
     Environment = "dev"
   }
 }
+
 
 module "blog_sg" {
   source  = "terraform-aws-modules/security-group/aws"
