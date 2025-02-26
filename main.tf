@@ -79,8 +79,16 @@ module "blog_alb" {
   }
 }
 
+resource "aws_lb_target_group_attachment" "lb_target_group_attachment" {
+  for_each          = toset(module.autoscaling.instances)  # Assuming you're using Auto Scaling instances
+  target_group_arn  = module.blog_alb.target_groups["ex-instance"].arn
+
+  target_id         = each.value.id  # EC2 instance ID or Auto Scaling instance ID
+  port              = 80
+}
+
 resource "aws_autoscaling_attachment" "asg_alb_attachment" {
-  autoscaling_group_name = module.autoscaling.autoscaling_group_name
+  autoscaling_group_name = module.autoscaling.autoscaling_group_id
   lb_target_group_arn    = module.blog_alb.target_groups["ex-instance"].arn
 }
 
