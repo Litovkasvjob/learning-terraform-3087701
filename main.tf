@@ -87,6 +87,8 @@ module "blog_alb" {
   subnets             = module.blog_vpc.public_subnets
   security_groups     = [module.blog_sg.security_group_id]
 
+  enable_target_group_attachment = false
+
   listeners = [
     {
       port     = 80
@@ -109,4 +111,9 @@ module "blog_alb" {
   tags = {
     Environment = "dev"
   }
+}
+
+resource "aws_autoscaling_attachment" "asg_alb_attachment" {
+  autoscaling_group_name = module.autoscaling.autoscaling_group_id
+  lb_target_group_arn    = module.blog_alb.target_groups["ex-instance"].arn
 }
