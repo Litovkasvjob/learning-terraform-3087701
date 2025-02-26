@@ -81,7 +81,7 @@ module "blog_alb" {
 }
 
 resource "aws_autoscaling_attachment" "asg_alb_attachment" {
-  autoscaling_group_name = module.autoscaling.image_id
+  autoscaling_group_name = module.autoscaling.arn
   lb_target_group_arn    = module.blog_alb.target_groups["ex-instance"]
 }
 
