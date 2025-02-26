@@ -72,10 +72,8 @@ module "autoscaling" {
   vpc_zone_identifier = module.blog_vpc.public_subnets
   security_groups     = [module.blog_sg.security_group_id]
 
-  launch_template = {
-    id      = aws_launch_template.blog_lt.id
-    version = aws_launch_template.blog_lt.latest_version
-  }
+  launch_template_id      = aws_launch_template.blog_lt.id
+  launch_template_version = aws_launch_template.blog_lt.latest_version
 }
 
 # Application Load Balancer (ALB)
