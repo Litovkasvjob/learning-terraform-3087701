@@ -30,6 +30,7 @@ module "blog_vpc" {
 }
 
 module "autoscaling" {
+
   source  = "terraform-aws-modules/autoscaling/aws"
   version = "8.1.0"
   
@@ -80,7 +81,7 @@ module "blog_alb" {
 }
 
 resource "aws_autoscaling_attachment" "asg_alb_attachment" {
-  autoscaling_group_name = module.autoscaling.name
+  autoscaling_group_name = module.autoscaling.image_id
   lb_target_group_arn    = module.blog_alb.target_groups["ex-instance"]
 }
 
