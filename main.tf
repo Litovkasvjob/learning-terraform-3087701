@@ -102,17 +102,11 @@ module "blog_alb" {
       name_prefix = "blog-"
       protocol    = "HTTP"
       port        = 80
-      # target_type = "instance"
+      target_type = "instance"
     }
   }
 
   tags = {
     Environment = "dev"
   }
-}
-
-# Attach Auto Scaling Group to Target Group
-resource "aws_autoscaling_attachment" "asg_alb_attachment" {
-  autoscaling_group_name = module.autoscaling.autoscaling_group_id
-  lb_target_group_arn    = module.blog_alb.target_groups["ex-instance"].arn
 }
