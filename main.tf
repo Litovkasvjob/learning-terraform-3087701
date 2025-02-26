@@ -80,7 +80,7 @@ module "blog_alb" {
 }
 
 resource "aws_lb_target_group_attachment" "lb_target_group_attachment" {
-  for_each          = toset(module.autoscaling.instances)  # Assuming you're using Auto Scaling instances
+  for_each          = toset(module.autoscaling.autoscaling_group_arn)  # Assuming you're using Auto Scaling instances
   target_group_arn  = module.blog_alb.target_groups["ex-instance"].arn
 
   target_id         = each.value.id  # EC2 instance ID or Auto Scaling instance ID
