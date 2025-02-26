@@ -38,7 +38,7 @@ module "autoscaling" {
   max_size = 2
 
   vpc_zone_identifier = module.blog_vpc.public_subnets
-  # target_group_arns   = module.blog_alb.target_group_arns
+  target_group_arns   = module.blog_alb.target_group_arns
   security_groups     = [module.blog_sg.security_group_id]
 
   image_id      = data.aws_ami.app_ami.id
@@ -49,6 +49,9 @@ module "blog_alb" {
   source = "terraform-aws-modules/alb/aws"
 
   name    = "blog-alb"
+
+  load_balancer_type = "application"
+
   vpc_id  = module.blog_vpc.vpc_id
   subnets = module.blog_vpc.public_subnets
   security_groups = [module.blog_sg.security_group_id]
@@ -57,10 +60,7 @@ module "blog_alb" {
     {
       port            = 80
       protocol        = "HTTP"
-      default_action = {
-        type              = "forward"
-        target_group_arn  = module.blog_alb.target_group_arns[0]
-      }
+      target_group_index = 0
     }
   ]
 
@@ -76,12 +76,6 @@ module "blog_alb" {
   tags = {
     Environment = "dev"
   }
-}
-
-resource "aws_lb_target_group_attachment" "blog_instance" {
-  target_group_arn = module.blog_alb.target_group_arns[0]
-  target_id        = aws_instance.blog.id
-  port            = 80
 }
 
 module "blog_sg" {
