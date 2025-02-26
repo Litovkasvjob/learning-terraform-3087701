@@ -79,6 +79,11 @@ module "blog_alb" {
   }
 }
 
+resource "aws_autoscaling_attachment" "asg_alb_attachment" {
+  autoscaling_group_name = module.autoscaling.blog.id
+  lb_target_group_arn    = module.blog_alb.target_group_arns["ex-instance"]
+}
+
 module "blog_sg" {
   source  = "terraform-aws-modules/security-group/aws"
   version = "5.3.0"
