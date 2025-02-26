@@ -58,18 +58,18 @@ module "blog_alb" {
       port            = 80
       protocol        = "HTTP"
       default_action = {
-        type = "forward"
-        target_group_arn = module.blog_alb.target_group_arns[0]
+        type              = "forward"
+        target_group_arn  = module.blog_alb.target_group_arns[0]
       }
     }
   ]
 
   target_groups = [
     {
-      name_prefix = "blog-"
-      protocol    = "HTTP"
-      port        = 80
-      target_type = "instance"
+      name_prefix  = "blog-"
+      protocol     = "HTTP"
+      port         = 80
+      target_type  = "instance"
     }
   ]
 
@@ -78,6 +78,11 @@ module "blog_alb" {
   }
 }
 
+resource "aws_lb_target_group_attachment" "blog_instance" {
+  target_group_arn = module.blog_alb.target_group_arns[0]
+  target_id        = aws_instance.blog.id
+  port            = 80
+}
 
 module "blog_sg" {
   source  = "terraform-aws-modules/security-group/aws"
